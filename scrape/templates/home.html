@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+
+{% block title %}My scraper tool{% endblock %}
+
+{% block content %}
+    <h1>Welcome to My Scraper Tool</h1>
+    <p>Click the button below to start scraping data.</p>
+    <form method="post" action="{% url 'scrape' %}">
+        {% csrf_token %}
+        <button type="submit">Start Scraping</button>
+    </form>
+{% endblock %}
