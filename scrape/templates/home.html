@@ -1,12 +1,194 @@
 {% extends "base.html" %}
+{% load static %}
 
 {% block title %}My scraper tool{% endblock %}
 
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+{% endblock %}
+
 {% block content %}
     <h1>Welcome to My Scraper Tool</h1>
-    <p>Click the button below to start scraping data.</p>
+    <p>Enter a URL to scrape:</p>
+    
     <form method="post" action="{% url 'scrape' %}">
         {% csrf_token %}
-        <button type="submit">Start Scraping</button>
+        <div class="form-group">
+            <input type="url" name="url" placeholder="https://example.com" required>
+        </div>
+        
+        <div class="form-group">
+            <div class="form-section-title">What would you like to scrape?</div>
+            <label class="form-label">
+                <input type="checkbox" name="scrape_title" checked> Page Title
+            </label>
+            <label class="form-label">
+                <input type="checkbox" name="scrape_headings" checked> Headings (H1, H2, H3)
+            </label>
+            <label class="form-label">
+                <input type="checkbox" name="scrape_links" checked> Links
+            </label>
+            <label class="form-label">
+                <input type="checkbox" name="scrape_paragraphs" checked> Paragraphs
+            </label>
+            <label class="form-label">
+                <input type="checkbox" name="scrape_images" checked> Images
+            </label>
+        </div>
+        
+        <div class="form-group">
+            <div class="form-section-title">Advanced Options</div>
+            <label class="form-label">
+                <input type="checkbox" name="use_selenium"> Use Selenium (for JavaScript-heavy/dynamic content)
+            </label>
+            <label class="form-label">
+                <input type="checkbox" name="scrape_link_targets"> Scrape link targets (scrape pages linked from main page)
+            </label>
+            <label class="form-label">
+                Recursion depth: 
+                <select name="recursive_depth">
+                    <option value="1">1 (Main page + linked pages)</option>
+                    <option value="2">2 (Follow links deeper)</option>
+                </select>
+            </label>
+        </div>
+        
+        <button type="submit" class="form-button">Start Scraping</button>
     </form>
+    
+    {% if error %}
+        <div class="error-message">
+            <strong>Error:</strong> {{ error }}
+        </div>
+    {% endif %}
+    
+    {% if data %}
+        <!-- Robots.txt Check -->
+        {% if data.robots_txt or data.robots_allowed is not None %}
+            <div class="robots-check {% if data.robots_allowed %}allowed{% else %}not-allowed{% endif %}">
+                <h3>
+                    {% if data.robots_allowed %}
+                        ✓ Robots.txt Check: ALLOWED
+                    {% else %}
+                        ✗ Robots.txt Check: NOT ALLOWED
+                    {% endif %}
+                </h3>
+                
+                {% if data.robots_txt %}
+                    <div class="robots-txt-content">
+                        <pre>{{ data.robots_txt }}</pre>
+                    </div>
+                    <p class="robots-note">
+                        <strong>Note:</strong> Please respect the robots.txt rules. If scraping is not allowed, consider contacting the website owner for permission.
+                    </p>
+                {% else %}
+                    <p class="robots-no-file">No robots.txt file found. Scraping should be acceptable, but always be respectful.</p>
+                {% endif %}
+            </div>
+        {% endif %}
+        
+        <!-- Fetch Method Info -->
+        {% if data.fetch_method %}
+            <div class="fetch-method-info">
+                <strong>Fetch Method:</strong> {{ data.fetch_method }}
+            </div>
+        {% endif %}
+        
+        <div class="results-container">
+            <h2>Scraped Results <span class="item-count">{{ data.pages_scraped }} page(s)</span></h2>
+            
+            <!-- Main Page Results -->
+            {% if data.main_page %}
+                <div class="main-page-container">
+                    <h3>Main Page: <a href="{{ data.main_page.url }}" target="_blank">{{ data.main_page.url }}</a></h3>
+                    
+                    {% if data.main_page.data.title %}
+                        <div class="result-section">
+                            <strong>Title:</strong>
+                            <p>{{ data.main_page.data.title }}</p>
+                        </div>
+                    {% endif %}
+                    
+                    {% if data.main_page.data.headings %}
+                        <div class="result-section">
+                            <strong>Headings <span class="item-count">{{ data.main_page.data.headings|length }}</span></strong>
+                            <ul>
+                                {% for heading in data.main_page.data.headings %}
+                                    <li class="heading-item">{{ heading }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    {% endif %}
+                    
+                    {% if data.main_page.data.links %}
+                        <div class="result-section">
+                            <strong>Links <span class="item-count">{{ data.main_page.data.links|length }}</span></strong>
+                            <ul class="links-list">
+                                {% for link in data.main_page.data.links %}
+                                    <li>
+                                        {% if link.href %}
+                                            <a href="{{ link.href }}" target="_blank">{{ link.text|default:"No text" }}</a>
+                                            <span class="link-url">{{ link.href }}</span>
+                                        {% else %}
+                                            {{ link.text|default:"No link text" }}
+                                        {% endif %}
+                                    </li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    {% endif %}
+                    
+                    {% if data.main_page.data.paragraphs %}
+                        <div class="result-section">
+                            <strong>Paragraphs <span class="item-count">{{ data.main_page.data.paragraphs|length }}</span></strong>
+                            <ul>
+                                {% for para in data.main_page.data.paragraphs %}
+                                    <li class="paragraph-item">{{ para }}...</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    {% endif %}
+                    
+                    {% if data.main_page.data.images %}
+                        <div class="result-section">
+                            <strong>Images <span class="item-count">{{ data.main_page.data.images|length }}</span></strong>
+                            <ul>
+                                {% for image in data.main_page.data.images %}
+                                    <li class="image-item">{{ image }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    {% endif %}
+                </div>
+            {% endif %}
+            
+            <!-- Linked Pages Results -->
+            {% if data.linked_pages %}
+                <h3 class="linked-pages-header">Linked Pages (<span class="linked-pages-count">{{ data.linked_pages|length }}</span>)</h3>
+                {% for page in data.linked_pages %}
+                    <div class="linked-page-item">
+                        <h4><a href="{{ page.url }}" target="_blank">{{ page.url }}</a></h4>
+                        
+                        {% if page.data.title %}
+                            <div class="linked-page-info">
+                                <strong>Title:</strong> {{ page.data.title }}
+                            </div>
+                        {% endif %}
+                        
+                        {% if page.data.headings %}
+                            <div class="linked-page-info">
+                                <strong>Headings:</strong> {{ page.data.headings|join:", " }}
+                            </div>
+                        {% endif %}
+                        
+                        {% if page.data.paragraphs %}
+                            <div class="linked-page-info">
+                                <strong>Content:</strong> {{ page.data.paragraphs.0 }}...
+                            </div>
+                        {% endif %}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        </div>
+    {% endif %}
 {% endblock %}
