@@ -86,4 +86,8 @@ Always respect:
 
 ## License
 
-MIT
+## Dev diary UPDATE 11/12/25
+
+Release of Alpha build onto Heroku, I will be rebuiding this in an Azure container once it's out of Alpha. 
+Eco dynos don't support selenium due to processing power, (the dynamic content extraction isn't complete yet anyway)
+I just want to experiment with the current build on a cloud platform, and this is the easiest.   

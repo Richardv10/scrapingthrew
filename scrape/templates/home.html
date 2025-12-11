@@ -8,8 +8,14 @@
 {% endblock %}
 
 {% block content %}
-    <h1>Welcome to My Scraper Tool</h1>
-    <p>Enter a URL to scrape:</p>
+    <h1>Just Scraping Through</h1>
+    <div class="instructions-container">
+        <button type="button" class="collapsible">Instructions</button>
+        <div class="content">
+            <p>Welcome to Rich's scraper tool (Alpha build v1.2) <br> This is provided "as is" and is in active development, feel free to fork the project for personal use. <br> It's built in django to make use of python modules. Providing basic DOM extraction via Beautiful Soup, and Selenium integration for dynamic content scraping. <br> Built in awareness of robots.txt, and limits recursive scraping depth to avoid overloading servers. Use responsibly! <br> I am integrating Ai features, and improving the UX, check the Github Readme for Dev diary updates NOTE: SELENIUM IS CURRENTLY NOT FUNCTIONAL ON HEROKU ECO DYNOS, SO IF THE FEATURE IS WORKING IT'S PROBABLY BECAUSE I HAVE AN INTERVIEW COMING UP </p>
+        </div>
+    </div>
+    <h2>Enter a URL to scrape:<h2>
     
     <form method="post" action="{% url 'scrape' %}">
         {% csrf_token %}
@@ -34,6 +40,9 @@
             <label class="form-label">
                 <input type="checkbox" name="scrape_images" checked> Images
             </label>
+            <label class="form-label">
+                <input type="checkbox" name="scrape_videos"> Videos
+            </label>
         </div>
         
         <div class="form-group">
@@ -51,6 +60,44 @@
                     <option value="2">2 (Follow links deeper)</option>
                 </select>
             </label>
+        </div>
+        
+        <div class="form-group">
+            <div class="form-section-title">Result Limits</div>
+            <p class="form-help-text">Set the maximum number of each item type to return from each page:</p>
+            <div class="limits-grid">
+                <div class="limit-input-group">
+                    <label for="limit_headings">Max Headings:</label>
+                    <input type="number" id="limit_headings" name="limit_headings" value="5" min="1" max="50">
+                </div>
+                <div class="limit-input-group">
+                    <label for="limit_links">Max Links:</label>
+                    <input type="number" id="limit_links" name="limit_links" value="10" min="1" max="50">
+                </div>
+                <div class="limit-input-group">
+                    <label for="limit_paragraphs">Max Paragraphs:</label>
+                    <input type="number" id="limit_paragraphs" name="limit_paragraphs" value="3" min="1" max="50">
+                </div>
+                <div class="limit-input-group">
+                    <label for="limit_images">Max Images:</label>
+                    <input type="number" id="limit_images" name="limit_images" value="5" min="1" max="50">
+                </div>
+                <div class="limit-input-group">
+                    <label for="limit_videos">Max Videos:</label>
+                    <input type="number" id="limit_videos" name="limit_videos" value="5" min="1" max="50">
+                </div>
+                <div class="limit-input-group">
+                    <label for="limit_linked_pages">Max Linked Pages:</label>
+                    <input type="number" id="limit_linked_pages" name="limit_linked_pages" value="5" min="1" max="50">
+                </div>
+            </div>
+        </div>
+        
+        <div class="form-group">
+            <div class="form-section-title">Search Within Site (Optional)</div>
+            <label for="search_query">Search for a phrase:</label>
+            <input type="text" id="search_query" name="search_query" placeholder="e.g., 'Python tutorial'">
+            <p style="font-size: 0.85rem; color: #666; margin-top: 5px;">Search will find matches across all scraped pages and show context.</p>
         </div>
         
         <button type="submit" class="form-button">Start Scraping</button>
@@ -101,6 +148,30 @@
             {% if data.main_page %}
                 <div class="main-page-container">
                     <h3>Main Page: <a href="{{ data.main_page.url }}" target="_blank">{{ data.main_page.url }}</a></h3>
+                    
+                    <!-- Search Results for Main Page -->
+                    {% if data.main_page.search_result %}
+                        <div class="search-results-container">
+                            <h4>Search Results
+                                {% if data.main_page.search_result.found %}
+                                    <span class="item-count">{{ data.main_page.search_result.count }} match(es)</span>
+                                {% else %}
+                                    <span class="item-count" style="background-color: #dc3545;">No matches</span>
+                                {% endif %}
+                            </h4>
+                            {% if data.main_page.search_result.found %}
+                                <ul class="search-matches-list">
+                                    {% for match in data.main_page.search_result.matches %}
+                                        <li class="search-match-item">
+                                            <p class="match-context">{{ match.context }}</p>
+                                        </li>
+                                    {% endfor %}
+                                </ul>
+                            {% else %}
+                                <p class="text-muted">The phrase "{{ search_query }}" was not found on this page.</p>
+                            {% endif %}
+                        </div>
+                    {% endif %}
                     
                     {% if data.main_page.data.title %}
                         <div class="result-section">
@@ -169,6 +240,22 @@
                     <div class="linked-page-item">
                         <h4><a href="{{ page.url }}" target="_blank">{{ page.url }}</a></h4>
                         
+                        <!-- Search Results for Linked Page -->
+                        {% if page.search_result %}
+                            <div class="search-results-container-small">
+                                {% if page.search_result.found %}
+                                    <p class="search-found"><strong>Search:</strong> <span class="item-count">{{ page.search_result.count }} match(es)</span></p>
+                                    <ul class="search-matches-list-small">
+                                        {% for match in page.search_result.matches %}
+                                            <li class="match-context-small">{{ match.context }}</li>
+                                        {% endfor %}
+                                    </ul>
+                                {% else %}
+                                    <p class="search-not-found"><strong>Search:</strong> <span class="item-count" style="background-color: #dc3545;">No matches</span></p>
+                                {% endif %}
+                            </div>
+                        {% endif %}
+                        
                         {% if page.data.title %}
                             <div class="linked-page-info">
                                 <strong>Title:</strong> {{ page.data.title }}
@@ -191,4 +278,22 @@
             {% endif %}
         </div>
     {% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Collapsible functionality
+    var coll = document.getElementsByClassName("collapsible");
+    for (var i = 0; i < coll.length; i++) {
+        coll[i].addEventListener("click", function() {
+            this.classList.toggle("active");
+            var content = this.nextElementSibling;
+            if (content.style.maxHeight) {
+                content.style.maxHeight = null;
+            } else {
+                content.style.maxHeight = content.scrollHeight + "px";
+            }
+        });
+    }
+</script>
 {% endblock %}
