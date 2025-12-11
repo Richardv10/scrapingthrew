@@ -231,7 +231,11 @@ select:focus {
 }
 
 /* COLLAPSIBLE SECTION */
-.collapsible {
+details {
+    margin-bottom: var(--spacing-xl);
+}
+
+summary {
     width: 100%;
     padding: var(--spacing-lg) var(--spacing-xl);
     background-color: var(--color-gray-light);
@@ -242,30 +246,34 @@ select:focus {
     font-weight: 600;
     cursor: pointer;
     transition: all 0.3s ease;
-    text-align: left;
-    margin-bottom: var(--spacing-lg);
+    list-style: none;
+    user-select: none;
 }
 
-.collapsible:hover {
+summary:hover {
     background-color: var(--color-primary-light);
     border-color: var(--color-accent);
 }
 
-.collapsible.active {
+details[open] summary {
     background-color: var(--color-accent);
     color: white;
     border-color: var(--color-accent);
 }
 
-.content {
-    max-height: 0;
-    overflow: hidden;
-    transition: max-height 0.3s ease-out;
-    margin-bottom: var(--spacing-xl);
+details > * {
+    animation: slideDown 0.3s ease-out;
 }
 
-.content.active {
-    max-height: 500px;
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 /* RESULT LIMITS SECTION */
